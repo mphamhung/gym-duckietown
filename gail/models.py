@@ -38,6 +38,14 @@ class Generator(nn.Module):
         self.lin2 = nn.Linear(256, 128)
         self.lin3 = nn.Linear(128,1)
         self.lin4 = nn.Linear(128,1)
+
+        self.action_mean = nn.Linear(last_dim, action_dim)
+        self.action_mean.weight.data.mul_(0.1)
+        self.action_mean.bias.data.mul_(0.0)
+
+        self.action_log_std = nn.Parameter(torch.ones(1, action_dim) * log_std)
+
+
     def forward(self,x):
         r = self.lr(self.resnet(x))
 
@@ -57,8 +65,13 @@ class Generator(nn.Module):
         x1 = self.sig(self.lin3(x))*2
         x2 = self.lin4(x)
 
-        return torch.cat((x1,x2),1)
+        action_mean = torch.cat((x1,x2),1)
+        action_log_std = self.action_log_std.expand_as(action_mean)
+        action_td = torch.cat((x1,x2),1)
 
+        return 
+
+    
 class Discriminator(nn.Module):
     def __init__(self, action_dim):
         super(Discriminator,self).__init__()
@@ -99,6 +112,28 @@ class Discriminator(nn.Module):
 
         return x
     
+class Value(nn.Module):
+    def __init__(self, observation_dim):
+        super(Value,self).__init__()
+        self.flatten = Flatten()
+        self.lr = nn.LeakyReLU()
+        self.fc = nn.Sequential(
+                                    # nn.Linear(observation_dim,observation_dim//2),
+                                    # self.lr,
+                                    # nn.Linear(observation_dim//2,observation_dim//4),
+                                    # self.lr,
+                                    # nn.Linear(observation_dim//4,observation_dim//8),
+                                    # self.lr,
+                                    # nn.Linear(observation_dim//8,1),
+                                    nn.Linear(observation_dim,1),
+                                    self.lr)
+
+    def forward(self, x):
+        x = self.flatten(x)
+        x = self.fc(x)
+
+        return x
+
 
 if __name__ == "__main__":
 

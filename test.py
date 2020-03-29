@@ -18,9 +18,10 @@ if __name__ == '__main__':
     parser.add_argument("--lrD", default=0.004, type=float, help="Discriminator learning rate")
     parser.add_argument("--get-samples", default=0, type=int, help="Generate expert data")
     parser.add_argument("--use-checkpoint", default=0, type=int, help="Use checkpoint for training")
-    parser.add_argument("--checkpoint", default="best", type=str, help="file name for checkpoint for training")
+    parser.add_argument("--checkpoint", default="imitate_2", type=str, help="file name for checkpoint for training")
     parser.add_argument("--enjoy_tag", default="_best", type=str, help="file tag for checkpoint for enjoying")
-
+    parser.add_argument('--gamma', type=float, default=0.99, metavar='G', help='discount factor (default: 0.99)')
+    parser.add_argument('--tau', type=float, default=0.95, metavar='G', help='gae (default: 0.95)')
 
 
     args = parser.parse_args()

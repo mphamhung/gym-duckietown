@@ -15,29 +15,35 @@ from gail.dataloader import *
 
 from torch.utils.tensorboard import SummaryWriter
 
+# from learning.utils.env import launch_env
+# from learning.utils.wrappers import NormalizeWrapper, ImgWrapper, \
+#     DtRewardWrapper, ActionWrapper, ResizeWrapper
+# from learning.utils.teacher import PurePursuitExpert
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def _train(args):
-    # from learning.utils.env import launch_env
-    # from learning.utils.wrappers import NormalizeWrapper, ImgWrapper, \
-    #     DtRewardWrapper, ActionWrapper, ResizeWrapper
-    # from learning.utils.teacher import PurePursuitExpert
 
+    ## Generate expert samples
     if args.get_samples:
         generate_expert_trajectorys(args)
     
+    ## Load expert data
     data = ExpertTrajDataset(args)
 
-    G = Generator(action_dim=2).to(device)
-    D = Discriminator(action_dim=2).to(device)
-    state_dict = torch.load('models/G_imitate_2.pt'.format(args.checkpoint), map_location=device)
-    G.load_state_dict(state_dict)
-    # if args.use_checkpoint:
-    #     state_dict = torch.load('models/G_{}.pt'.format(args.checkpoint), map_location=device)
-    #     G.load_state_dict(state_dict)
-    #     state_dict = torch.load('models/D_{}.pt'.format(args.checkpoint), map_location=device)
-    #     D.load_state_dict(state_dict)
+    ## Define Generator, Discrimnator, and Value networks
+    G = Generator(action_dim=data.action_dim).to(device)
+    D = Discriminator(action_dim=data.action_dim).to(device)
+    V = Value(observation_dim= data.observation_dim).to(device)
 
+    if args.use_checkpoint:
+        state_dict = torch.load('models/G_{}.pt'.format(args.checkpoint), map_location=device)
+        G.load_state_dict(state_dict)
+        state_dict = torch.load('models/D_{}.pt'.format(args.checkpoint), map_location=device)
+        D.load_state_dict(state_dict)
+
+
+    ## Define optimizers
     D_optimizer = optim.SGD(
         D.parameters(), 
         lr = args.lrD,
@@ -50,6 +56,12 @@ def _train(args):
         weight_decay=1e-3,
     )
 
+    V_optimizer = optim.SGD(
+        V.parameters(),
+        lr = args.lrG,
+        weight_decay=1e-3,
+    )
+
     avg_loss = 0
     avg_g_loss = 0
     loss_fn = nn.BCEWithLogitsLoss()
@@ -58,7 +70,9 @@ def _train(args):
     validation = args.epochs-1
     writer = SummaryWriter(comment='gail')
     for epoch in range(args.epochs):
-        if epoch % int(args.epochs/(args.episodes*0.7)) == 0 and args.batch_size < args.steps: #if divisible by 7 sample new trajectory?
+
+        ## Sample expert trajectories
+        if epoch % int(args.epochs/(args.episodes*0.7)) == 0 and args.batch_size <= args.steps: #if divisible by 7 sample new trajectory?
             rand_int = np.random.randint(0,(args.episodes*0.7))
             observations = torch.FloatTensor(data[rand_int]['observation']).to(device)
             actions =  torch.FloatTensor(data[rand_int]['action']).to(device)
@@ -68,6 +82,7 @@ def _train(args):
 
         obs_batch = observations[batch_indices]
         act_batch = actions[batch_indices]
+
 
         model_actions = G(obs_batch)
 
@@ -83,6 +98,7 @@ def _train(args):
         # policy_label = torch.randn((args.batch_size,1), device=device).float()*0.1 + 1
         # policy_label = policy_label.clamp(0,0.3)
         ##
+
         for _ in range(20):
 
             D_optimizer.zero_grad()
@@ -110,14 +126,30 @@ def _train(args):
                 p.data.clamp_(-0.01,0.01)
 
         ## Update G
-
         G_optimizer.zero_grad()
+        # Sample trajectories using policy
+        with torch.no_grad():
+            obs, acts, masks = generate_policy_trajectories(G, 1, 10)
+            obs = torch.FloatTensor(obs).to(device)
+            acts = torch.FloatTensor(acts).to(device)
+            masks = torch.FloatTensor(masks).to(device)
+            rewards = -torch.log(D(obs,acts))
+            values = V(obs)
 
+        ## Calculate advantage from trajectories
+
+        advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
+
+        print(advantages, returns)
+        return
         loss_g = -(torch.mean(D(obs_batch,model_actions)))
         # loss_g = loss_g.mean()
         loss_g.backward()
         G_optimizer.step()
 
+
+
+        ## Log losses
         avg_g_loss = loss_g.item()
         avg_loss = loss.item() 
 
@@ -137,3 +169,29 @@ def _train(args):
     # writer.add_graph("generator", G)
     # writer.add_graph("discriminator",D)
 
+
+
+
+def estimate_advantages(rewards, masks, values, gamma, tau, device):
+    rewards = rewards.to('cpu')
+    masks = masks.to('cpu')
+    values = masks.to('cpu')
+    tensor_type = type(rewards)
+    deltas = tensor_type(rewards.size(0), 1)
+    advantages = tensor_type(rewards.size(0), 1)
+
+    prev_value = 0
+    prev_advantage = 0
+    for i in range(rewards.size(0)):
+        deltas[i] = rewards[i] + gamma * prev_value * masks[i] - values[i]
+        advantages[i] = deltas[i] + gamma * tau * prev_advantage * masks[i]
+
+        prev_value = values[i]
+        prev_advantage = advantages[i]
+
+    returns = values + advantages
+    advantages = (advantages - advantages.mean()) / advantages.std()
+
+    advantages = advantages.to(device)
+    returns = returns.to(device)
+    return advantages, returns
