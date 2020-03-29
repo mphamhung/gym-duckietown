@@ -31,13 +31,16 @@ class Generator(nn.Module):
         resnet = models.resnet50(pretrained=True)
         self.resnet = nn.Sequential(*list(resnet.children())[:-2])
 
-        for param in self.resnet.parameters():
-            param.requires_grad = False
+        # for param in self.resnet.parameters():
+        #     param.requires_grad = False
           
         self.lin1 = nn.Linear(32*5*4, 256)
         self.lin2 = nn.Linear(256, 128)
         self.lin3 = nn.Linear(128,1)
         self.lin4 = nn.Linear(128,1)
+
+        self.lin5 = nn.Linear(128,1)
+
     def forward(self,x):
         r = self.lr(self.resnet(x))
 
@@ -56,8 +59,17 @@ class Generator(nn.Module):
         x = self.lr(self.lin2(x))
         x1 = self.sig(self.lin3(x))*2
         x2 = self.lin4(x)
+        value = self.sig(self.lin5(x))
 
-        return torch.cat((x1,x2),1)
+        return torch.cat((x1,x2),1), value
+
+    def get_stats(self, x):
+        action_mean = x.mean(0)
+        action_std = x.std(0)
+        action_log_std = torch.log(action_std)
+        # action_std = torch.exp(action_log_std)
+
+        return action_mean, action_log_std, action_std
 
 class Discriminator(nn.Module):
     def __init__(self, action_dim):

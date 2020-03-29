@@ -9,7 +9,7 @@ if __name__ == '__main__':
     parser.add_argument("--train", default=1, type=int, help="Train new model")
     parser.add_argument("--seed", default=1234, type=int, help="Sets Gym, TF, and Numpy seeds")
     parser.add_argument("--episodes", default=9, type=int, help="Number of epsiodes for experts")
-    parser.add_argument("--steps", default=50, type=int, help="Number of steps per episode")
+    parser.add_argument("--steps", default=32, type=int, help="Number of steps per episode")
     parser.add_argument("--batch-size", default=32, type=int, help="Training batch size")
     parser.add_argument("--epochs", default=10000, type=int, help="Number of training epochs")
     parser.add_argument("--model-directory", default="models/", type=str, help="Where to save models")
@@ -19,9 +19,9 @@ if __name__ == '__main__':
     parser.add_argument("--get-samples", default=0, type=int, help="Generate expert data")
     parser.add_argument("--use-checkpoint", default=0, type=int, help="Use checkpoint for training")
     parser.add_argument("--checkpoint", default="best", type=str, help="file name for checkpoint for training")
-    parser.add_argument("--enjoy_tag", default="_best", type=str, help="file tag for checkpoint for enjoying")
-
-
+    parser.add_argument("--enjoy-tag", default="_best", type=str, help="file tag for checkpoint for enjoying")
+    parser.add_argument("--max-kl", default="0.5", type=float, help="file tag for checkpoint for enjoying")
+    parser.add_argument("--damping", default="0.5", type=float, help="file tag for checkpoint for enjoying")
 
     args = parser.parse_args()
 
