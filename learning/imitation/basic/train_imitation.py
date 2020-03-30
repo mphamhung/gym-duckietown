@@ -63,8 +63,8 @@ def _train(args):
 
     # model = Model(action_dim=2, max_action=1.)
     model = Generator(action_dim=2)
-    state_dict = torch.load('models/G_imitate_2.pt', map_location=device)
-    model.load_state_dict(state_dict)
+    # state_dict = torch.load('models/G_imitate_2.pt', map_location=device)
+    # model.load_state_dict(state_dict)
     model.train().to(device)
 
     # weight_decay is L2 regularization, helps avoid overfitting
