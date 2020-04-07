@@ -108,6 +108,10 @@ class Discriminator(nn.Module):
                 self.encoder.load_state_dict(state_dict)
                 for param in self.encoder.parameters():
                     param.requires_grad = False
+                self.encoder = nn.Sequential(self.encoder,
+                        self.lr,
+                        nn.Linear(256,40),
+                        self.lr)
             else:
                 self.encoder =  models.resnet50(pretrained=True)
                 for param in self.encoder.parameters():
@@ -151,6 +155,12 @@ class Encoder(nn.Module):
         sampled = dist.rsample()
 
         return sampled
+
+    # def get_params__(self,x):
+    #     mu = self.mu_head(self.fc(x))
+    #     sig = abs(self.sig_head(self.fc(x))) + 1e-10
+
+    #     return mu, sig
 
 class Decoder(nn.Module):
     def __init__(self, observation_dim):

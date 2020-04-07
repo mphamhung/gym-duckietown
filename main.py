@@ -65,7 +65,7 @@ def main(args):
     # Duckietown environment
     from learning.utils.env import launch_env
     from learning.utils.wrappers import NormalizeWrapper, ImgWrapper, \
-        DtRewardWrapper, ActionWrapper, ResizeWrapper, PixelWrapper
+        DtRewardWrapper, ActionWrapper, ResizeWrapper, PixelWrapper, CartPole_Pixel
     from learning.utils.teacher import PurePursuitExpert, CartpoleController
 
     env = launch_env(args.env_name)
@@ -77,7 +77,9 @@ def main(args):
         env = DtRewardWrapper(env)
         action_dim = 2
     else:
-        # env = PixelWrapper(env)
+        env = CartPole_Pixel(env)
+        env.render()
+        return
         action_dim = 1
 
     observation_shape = env.observation_space.shape
@@ -180,7 +182,7 @@ if __name__ == "__main__":
         observation_shape = env.observation_space.shape
 
         env.seed(0)
-        model = Generator(observation_shape,action_dim=action_dim)
+        model = Generator(observation_shape,action_dim=action_dim, use_VAE=args.use_vae)
         state_dict = torch.load('{}/g-{}'.format(args.env_name, args.training_name), map_location=device)
         model.load_state_dict(state_dict)
         gail_agent = GAIL_Agent(env, args, model,"PPO")

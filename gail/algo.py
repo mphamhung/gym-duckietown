@@ -270,6 +270,7 @@ class GAIL_Agent():
             #Save Checkpoint
             reward = self.eval()
             print(reward.data)
+            self.writer.add_scalar("validation/true reward", reward, epoch)
 
             if epoch % 20 == 0:
                 # loss_eval = self.eval()
@@ -297,15 +298,20 @@ class GAIL_Agent():
             policy_loss = self.loss_fn(prob_policy, policy_label)
 
             loss =  policy_loss + expert_loss
+            loss.backward(retain_graph=True)
+            self.d_optimizer.step()
+
+            # for p in self.discriminator.parameters():
+            #         p.data.clamp_(-0.01,0.01)
 
         elif self.args.update_d == "WGAN":
             loss = (prob_expert.mean() - prob_policy.mean()).norm(2)
 
-        loss.backward(retain_graph=True)
-        self.d_optimizer.step()
+            loss.backward(retain_graph=True)
+            self.d_optimizer.step()
 
-        for p in self.discriminator.parameters():
-                p.data.clamp_(-0.01,0.01)
+            for p in self.discriminator.parameters():
+                    p.data.clamp_(-0.01,0.01)
 
         self.writer.add_scalar("discriminator/loss", loss.data, epoch)
         return loss.data
@@ -322,7 +328,6 @@ class GAIL_Agent():
         # policy_actions = self.generator.get_means(self.expert_trajectories['observations'].to(device))
         # reward = abs(self.expert_trajectories['actions'].to(device) - policy_actions).sum()
         
-
         return reward
 
     def enjoy(self):
@@ -481,10 +486,10 @@ class GAIL_Agent():
         return loss.data
 
     def policy_gradient(self, obs_batch, act_batch, policy_action, epoch):
-        policy_trajectories = self.get_policy_trajectory(5, 50).to(device)
+        policy_trajectories = self.get_policy_trajectory(self.args.sampling_eps, self.args.ppo_steps)
 
         self.g_optimizer.zero_grad()
-        loss = policy_trajectories["rewards"].log().mean()
+        loss = (policy_trajectories["log_probs"]*(policy_trajectories["rewards"] - policy_trajectories["values"])).mean().to(device)
         loss.backward()
         self.g_optimizer.step()
         self.writer.add_scalar("generator/loss", loss.data, epoch)

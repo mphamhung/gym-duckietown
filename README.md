@@ -48,12 +48,25 @@ VAE vs Resnet
 ```bash
 python main.py --enjoy 0 --eval 0 --train 0 --train-vae 1 --env_name 'duckietown'
 
-python main.py --training-name imitate-vae-1 --update-with PPO --eval 1 --train 1 --epochs 1000 --d_schedule 5 --lrD 0.00005 --env_name duckietown --update-d WGAN --lrG 1e-5 --episodes 1 --pretrain-name imitate-vae-1 --sampling-eps 3 --pretrain-D 200 --use-checkpoint 1 --D-iter 5 --use-vae 1 --imitation 1
+python main.py --training-name imitate-vae-1-base --train 1 --epochs 1000 --d-schedule 5 --env_name duckietown --lrG 1e-5 --episodes 1 --pretrain-name imitate-vae-1 --pretrain-D 200 --D-iter 5 --use-vae 1 --imitation 1
 
-python main.py --update-with PPO --eval 1 --train 1 --epochs 1000 --d_schedule 5 --lrD 0.005 --env_name duckietown --update-d WGAN --lrG 1e-6 --episodes 1 --pretrain-name imitate-resnet50-1 --sampling-eps 3 --pretrain-D 200 --D-iter 5 --use-vae 0 --use-checkpoint 0 --train 1 --training-name imitate-resnet50-1 --imitation 1
+python main.py --training-name gail-wgan-vae-1 --train 1 --epochs 5000 --d-schedule 5 --env_name duckietown --lrG 1e-5 --episodes 1 --pretrain-name imitate-vae-1-base --pretrain-D 500 --D-iter 5 --use-vae 1 --update-d WGAN --use-checkpoint 1
+
+python main.py --training-name imitate-vae-1 --train 1 --epochs 5000 --env_name duckietown --lrG 1e-5 --episodes 1 --pretrain-name imitate-vae-1-base --pretrain-D 500 --D-iter 5 --use-vae 1 --imitation 1 --use-checkpoint 1
+
+python main.py --training-name gail-reinforce-vae-1 --train 1 --epochs 5000 --env_name duckietown --lrG 1e-5 --episodes 1 --pretrain-name imitate-vae-1-base --pretrain-D 500 --D-iter 5 --use-vae 1 --imitation 1 --use-checkpoint 1 --sampling-eps 1 --ppo-steps 10 --update-with "POLICY GRADIENT"
 ```
 
+Vanilla Returns
 
+```bash
+python main.py --update-with 0 --eval 0 --train 1 --env_name duckietown --update-d WGAN --lrG 1e-4 --episodes 1 --pretrain-name imitate-resnet50-1 --sampling-eps 50 --ppo-steps 100 --use-vae 0 --use-checkpoint 1 --train 1 --training-name gail-wgan-resnet50-1 --ppo-epochs 1 --pretrain-D 500 --epochs 5000
+python main.py --eval 0 --train 1 --env_name duckietown --update-d WGAN --lrG 1e-7 --episodes 1 --pretrain-name imitate-resnet50-1 --sampling-eps 3 --pretrain-D 200 --D-iter 5 --use-vae 0 --use-checkpoint 1 --train 1 --training-name imitate-resnet50-1 --imitation 1 --epochs 5000
+
+python main.py --update-with 0 --eval 0 --train 1 --env_name duckietown --update-d WGAN --lrG 1e-4 --episodes 3 --pretrain-name imitate-resnet50-1 --sampling-eps 50 --ppo-steps 100 --use-vae 0 --use-checkpoint 1 --train 1 --training-name gail-wgan-resnet50-3 --ppo-epochs 1 --pretrain-D 500 --epochs 5000
+python main.py --eval 0 --train 1 --env_name duckietown --update-d WGAN --lrG 1e-4 --episodes 3 --pretrain-name imitate-resnet50-1 --sampling-eps 3 --pretrain-D 200 --D-iter 5 --use-vae 0 --use-checkpoint 1 --train 1 --training-name imitate-resnet50-3 --imitation 1 --epochs 5000
+
+```
 
 Policy Gradient Vs PPO Vs Vanilla Returns
 
